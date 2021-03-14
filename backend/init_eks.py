@@ -1,4 +1,5 @@
 # init eks
+#https://pypi.org/project/aws-cdk.aws-eks/
 
 
 #step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
