@@ -1,0 +1,204 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EKS Sample VPC - Private and Public subnets'
+
+Parameters:
+
+  VpcBlock:
+    Type: String
+    Default: {{vpc_default_block}} # 192.168.0.0/16
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  {% for pub_sub_blk in public_sub_blks %}
+  PublicSubnet{{ loop.index }}Block:
+    Type: String
+    Default: {{ pub_sub_blk }} # 192.168.0.0/18
+    Description: CidrBlock for public subnet {{ loop.index }} within the VPC
+  {% endfor %}
+  
+  {% for pri_sub_blk in private_sub_blks %}
+  PrivateSubnet{{ loop.index }}Block:
+    Type: String
+    Default: {{ pri_sub_blk }}
+    Description: CidrBlock for private subnet {{ loop.index }} within the VPC
+  {% endfor %}
+  
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Worker Network Configuration"
+        Parameters:
+          - VpcBlock
+          {% for pub_sub_blk in public_sub_blks %}
+          - PublicSubnet{{ loop.index }}Block
+          {% endfor %}
+          {% for pri_sub_blk in private_sub_blks %}
+          - PrivateSubnet{{ loop.index }}Block
+          {% endfor %}
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:  !Ref VpcBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-VPC'
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  VPCGatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: Public Subnets
+      - Key: Network
+        Value: Public
+
+  {% for pri_sub_blk in private_sub_blks %}
+  PrivateRouteTable{{ loop.index }}:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: Private Subnet AZ{{ loop.index }}
+      - Key: Network
+        Value: Private{{ loop.index }}
+  {% endfor %}
+
+  PublicRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  {% for pri_sub_blk in private_sub_blks %}
+  PrivateRoute{{ loop.index }}:
+    DependsOn:
+    - VPCGatewayAttachment
+    - NatGateway{{ loop.index }}
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable{{ loop.index }}
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway{{ loop.index }}
+
+  PrivateRoute:
+  NatGateway{{ loop.index }}:
+    DependsOn:
+    - NatGatewayEIP{{ loop.index }}
+    - PublicSubnet{{ loop.index }}
+    - VPCGatewayAttachment
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt 'NatGatewayEIP{{ loop.index }}.AllocationId'  ### ????
+      SubnetId: !Ref PublicSubnet{{ loop.index }}
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-NatGatewayAZ{{ loop.index }}'
+
+
+  NatGatewayEIP{{ loop.index }}:
+    DependsOn:
+    - VPCGatewayAttachment
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  {% endfor %}
+  
+  {% for pub_sub_blk in public_sub_blks %}
+  PublicSubnet{{ loop.index }}:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Subnet {{ loop.index }}
+    Properties:
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+        - '0'
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      CidrBlock:
+        Ref: PublicSubnet{{ loop.index }}Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${AWS::StackName}-PublicSubnet{{ loop.index }}"
+      - Key: kubernetes.io/role/elb
+        Value: 1
+  {% endfor %}
+  
+  {% for pri_sub_blk in private_sub_blks %}
+  PrivateSubnet{{ loop.index }}:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Subnet 03  ## ????
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - '0'
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      CidrBlock:
+        Ref: PrivateSubnet{{ loop.index }}Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${AWS::StackName}-PrivateSubnet{{ loop.index }}"
+      - Key: kubernetes.io/role/internal-elb
+        Value: 1
+  {% endfor %}
+  
+  {% for pub_sub_blk in public_sub_blks %}
+  PublicSubnet{{ loop.index }}RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet{{ loop.index }}
+      RouteTableId: !Ref PublicRouteTable
+  {% endfor %}
+
+  {% for pri_sub_blk in private_sub_blks %}
+  PrivateSubnet{{ loop.index }}RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet{{ loop.index }}
+      RouteTableId: !Ref PrivateRouteTable{{ loop.index }}
+  {% endfor %}
+
+  ControlPlaneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Cluster communication with worker nodes
+      VpcId: !Ref VPC
+
+Outputs:
+
+  SubnetIds:
+    Description: Subnets IDs in the VPC
+    Value: !Join [ ",", [ {% for pub_sub_blk in public_sub_blks %}!Ref PublicSubnet{{ loop.index }}, {% endfor %} {% for pri_sub_blk in private_sub_blks %}!Ref PrivateSubnet{{ loop.index }}, {% endfor %} ] ]
+
+  SecurityGroups:
+    Description: Security group for the cluster control plane communication with worker nodes
+    Value: !Join [ ",", [ !Ref ControlPlaneSecurityGroup ] ]
+
+  VpcId:
+    Description: The VPC Id
+    Value: !Ref VPC
