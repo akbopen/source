@@ -3,8 +3,9 @@
 # reference:
 # 1. https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/eks.html
-
 # 2. https://pypi.org/project/aws-cdk.aws-eks/
+# 3. https://github.com/akbopen/kb/blob/master/deploy_eks.md
+
 
 # Installation
 ## pip install boto3
@@ -119,7 +120,7 @@ aws iam attach-role-policy \
 
 
 @utils.passmein
-def create_aws_vpc():
+def create_aws_vpc_stack():
   """ # step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
 
   aws cloudformation create-stack \
@@ -154,9 +155,36 @@ def attach_eks_iam():
   pass
 
 
+def create_cluster_role_trust_policy():
+  """ # step 1.2.1 create the required Amazon EKS IAM managed policy 
+  file name: airformex-cluster-role-trust-policy.json
+  file content:
+  
+  {
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "eks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+   ]
+  }
+  """
+  
+  
+def create_cluster_iam_role():
+  """ # step 1.2.2 create cluster IAM role
+  
+   aws iam create-role \
+     --role-name AirFormexEKSClusterRole \
+     --assume-role-policy-document file://"airformex-cluster-role-trust-policy.json"
 
-#step 1.3
+  """   
 
+ 
 # Step 2: Configure to communicate with cluster
 @utils.passmein
 def create_kubeconfig():
@@ -392,10 +420,43 @@ def list_clusters(max_clusters=10, iter_marker=''):
     return clusters['clusters'], marker
   
   
-  def main():
+def attach_role_policy(): 
+   """ # step 1.2.3 Attach the required Amazon EKS managed IAM policy to the role.
+   aws iam attach-role-policy \
+     --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
+     --role-name AirFormexEKSClusterRole
+   """
     
+    
+def create_eks_cluster():
+   """ # step 2.1 create_eks_cluster
+   Null, currently creating via Console UI
+   """
+ 
+    
+def kubeconfig_update():
+  """ # step 2.2  Create or update a kubeconfig file for cluster.
+  aws eks update-kubeconfig \
+    --region ap-southeast-2 \
+    --name AirFormex-EKS
+
+  """
+  
+ 
+def post_eks_create_test():
+  """
+  kubectl get svc # Need to collect output, will have to use SDK handler
+  """
  
 
+def create_openid_connect_provider():
+  """
+  
+  """
+  
+  
+  def main():
+    
     # Use Amazon S3
     s3 = boto3.resource('s3')
     Now that you have an s3 resource, you can make send requests to the service. The following code uses the buckets collection to print out all bucket names:
@@ -413,8 +474,6 @@ def list_clusters(max_clusters=10, iter_marker=''):
     # Init EKS client
     client = boto3.client('eks', config=my_config)
  
-    
-    
     # create cluster
     resourcesVpcConfig = create_aws_vpc()
     create_iam_role()
