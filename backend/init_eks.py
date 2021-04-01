@@ -421,7 +421,8 @@ def list_clusters(max_clusters=10, iter_marker=''):
   
   
 def attach_role_policy(): 
-   """ # step 1.2.3 Attach the required Amazon EKS managed IAM policy to the role.
+   """
+   Step 1.2.3 Attach the required Amazon EKS managed IAM policy to the role.
    aws iam attach-role-policy \
      --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
      --role-name AirFormexEKSClusterRole
@@ -429,32 +430,105 @@ def attach_role_policy():
     
     
 def create_eks_cluster():
-   """ # step 2.1 create_eks_cluster
+   """
+   Step 2.1 create_eks_cluster
    Null, currently creating via Console UI
    """
  
     
 def kubeconfig_update():
-  """ # step 2.2  Create or update a kubeconfig file for cluster.
+  """
+  Step 2.2  Create or update a kubeconfig file for cluster.
   aws eks update-kubeconfig \
     --region ap-southeast-2 \
     --name AirFormex-EKS
-
   """
   
- 
+
 def post_eks_create_test():
-  """
-  kubectl get svc # Need to collect output, will have to use SDK handler
+  """ 
+  step 2.3 Test configuration
+  kubectl get svc 
+  # Need to collect output, will have to use SDK handler
   """
  
 
 def create_openid_connect_provider():
   """
+  Step 2.4 create an IAM OpenID Connect (OIDC) provider, need to scope SDK
   
+  Current option, manual via Console:
+  1. Hit Configuration from EKS cluster
+  2. Copy value for OpenID Connect provider URL
+  3. Add IAM Identity provider with OpenID Connect, give URL from EKS cluster
+  4. Enable thumbprint
+  5. Add sts.amazonaws.com for Audience
   """
   
+
+# Following for eks node creation 
+def create_vpc_cni_plugin_iam_role():
+    """ 
+    Step 4.1 Create an IAM role for the Amazon VPC CNI plugin
+    aws iam create-role \
+  --role-name AirFormexEKSCNIRole \
+  --assume-role-policy-document file://"airformex-cni-role-trust-policy.json"
+    """
+   
+def attach_vpc_cni_trust_policy_to_eks_iam_role():
+    """
+    Step 4.2
+    aws iam attach-role-policy \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
+  --role-name AirFormexEKSCNIRole
+    """
   
+def associate_eks_account_to_eks_iam_role():
+    """
+    aws eks update-addon \
+  --cluster-name AirFormex-EKS \
+  --addon-name vpc-cni \
+  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole 
+    """
+
+def create_node_iam_role():
+    """
+    aws iam create-role \
+  --role-name AirFormexEKSNodeRole \
+  --assume-role-policy-document file://"airformex-node-role-trust-policy.json"
+    """
+
+def attach_eks_management_policy_to_eks_iam_role():
+    """
+    Step 4.3
+    aws iam attach-role-policy \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy \
+  --role-name AirFormexEKSNodeRole
+aws iam attach-role-policy \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
+  --role-name AirFormexEKSNodeRole
+    """
+    
+ 
+def create_eks_node_group():
+    """
+    Step 4.4 - 4.9 currently manual actions via Console, need to scope SDK
+    """
+
+
+def create_ec2_keypair():
+    """
+    Step 4.10
+    aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
+    """
+   
+def node_post_check():
+    """
+    Step 4.11 review resource, polling stage
+    """"
+    
+
+
   def main():
     
     # Use Amazon S3
