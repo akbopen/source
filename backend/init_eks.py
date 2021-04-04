@@ -157,22 +157,8 @@ def attach_eks_iam():
 
 def create_cluster_role_trust_policy():
   """ # step 1.2.1 create the required Amazon EKS IAM managed policy 
-  file name: airformex-cluster-role-trust-policy.json
-  file content:
-  
-  {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "eks.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-   ]
-  }
   """
+  airformex-cluster-role-trust-policy.json
   
   
 def create_cluster_iam_role():
