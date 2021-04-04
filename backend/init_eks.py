@@ -35,7 +35,7 @@ from botocore.config import Config
 
 
 my_config = Config(
-    region_name = 'us-west-2',
+#     region_name = 'us-west-2',
     signature_version = 'v4',
     retries = {
         'max_attempts': 10,
@@ -110,11 +110,11 @@ proxy_definitions = {
 
 def attach_policy_to_role(policy_arn, role_name):
   """
-Attach the required Amazon EKS managed IAM policy to a role.
-e.g.
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
-  --role-name AirFormexEKSCNIRole
+    Attach the required Amazon EKS managed IAM policy to a role.
+    e.g.
+    aws iam attach-role-policy \
+      --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
+      --role-name AirFormexEKSCNIRole
   """
   pass
 
@@ -131,16 +131,26 @@ def create_aws_vpc_stack():
   pass
 
 
+
+def get_policy_doc(config_file_name):
+    """all config, cloudformation and template file are in backend/template."""
+    ### ###
+    return ‘backend/template’ + config_file_name
+    
+
 # 2. Create a cluster IAM role and attach the required Amazon EKS IAM managed policy to it. Kubernetes clusters managed by Amazon EKS make calls to other AWS services on your behalf to manage the resources that you use with the service.
 @utils.passmein
-def create_iam_role():
+def create_iam_role(eks_session, role_name, policy_file):
   """Create a cluster IAM role.
   
   aws iam create-role \
   --role-name AirFormexEKSClusterRole \
   --assume-role-policy-document file://"airformex-cluster-role-trust-policy.json"
+
   """
-  pass
+  role_name = 'AirFormexEKSClusterRole'
+  policy_file = get_policy_doc(policy_file)
+  return eks_session.iam().create_role(role_name, policy_file)
 
 
 @utils.passmein
@@ -155,10 +165,11 @@ def attach_eks_iam():
   pass
 
 
-def create_cluster_role_trust_policy():
+def create_cluster_role_trust_policy(policy_file):
   """ # step 1.2.1 create the required Amazon EKS IAM managed policy 
+  policy_file=airformex-cluster-role-trust-policy.json
   """
-  airformex-cluster-role-trust-policy.json
+  pass
   
   
 def create_cluster_iam_role():
@@ -246,15 +257,14 @@ aws iam create-role \
 
 @utils.passmein
 def attach_policy_to_node_role(policy_arn, role_name):
-  """
-3.3 Attach the required Amazon EKS managed IAM policies to the role.
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy \
-  --role-name AirFormexEKSNodeRole
-  
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
-  --role-name AirFormexEKSNodeRole
+  """3.3 Attach the required Amazon EKS managed IAM policies to the role.
+    aws iam attach-role-policy \
+      --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy \
+      --role-name AirFormexEKSNodeRole
+
+    aws iam attach-role-policy \
+      --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
+      --role-name AirFormexEKSNodeRole
   """
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
@@ -516,20 +526,6 @@ def node_post_check():
 
 
   def main():
-    
-    # Use Amazon S3
-    s3 = boto3.resource('s3')
-    Now that you have an s3 resource, you can make send requests to the service. The following code uses the buckets collection to print out all bucket names:
-
-    # Print out bucket names
-    for bucket in s3.buckets.all():
-        print(bucket.name)
-
-    # Upload and download binary data. For example, the following uploads a new file to S3, assuming that the bucket my-bucket already exists:
-    # Upload a new file
-    data = open('test.jpg', 'rb')
-    s3.Bucket('my-bucket').put_object(Key='test.jpg', Body=data)
-
 
     # Init EKS client
     client = boto3.client('eks', config=my_config)
@@ -564,14 +560,6 @@ def node_post_check():
                 break
             clusters, marker = list_clusters(iter_marker=marker)
 
-
-if __name__ == '__main__':
-    main()
-
-    
-
-# def attach_role_policy(): 
-# def create_eks_cluster():
 # def kubeconfig_update():
 # def post_eks_create_test():
 # def create_openid_connect_provider():
@@ -583,3 +571,9 @@ if __name__ == '__main__':
 # def create_eks_node_group():
 # def create_ec2_keypair():
 # def node_post_check():
+            
+if __name__ == '__main__':
+    main()
+
+
+
