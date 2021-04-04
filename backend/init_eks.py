@@ -567,3 +567,19 @@ def node_post_check():
 
 if __name__ == '__main__':
     main()
+
+    
+
+# def attach_role_policy(): 
+# def create_eks_cluster():
+# def kubeconfig_update():
+# def post_eks_create_test():
+# def create_openid_connect_provider():
+# def create_vpc_cni_plugin_iam_role():
+# def attach_vpc_cni_trust_policy_to_eks_iam_role():
+# def associate_eks_account_to_eks_iam_role():
+# def create_node_iam_role():
+# def attach_eks_management_policy_to_eks_iam_role():
+# def create_eks_node_group():
+# def create_ec2_keypair():
+# def node_post_check():
