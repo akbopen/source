@@ -134,8 +134,13 @@ def create_aws_vpc_stack():
     --template-url https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml
  
   """
-  pass
+  client = boto3.client('cloudformation')
+  response = client.create_stack(
+     StackName='airformex-eks-vpc-stack',
+     TemplateURL='https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml',
+  )
 
+  print(response)
 
 
 def get_policy_doc(config_file_name):
