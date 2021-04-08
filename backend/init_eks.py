@@ -116,7 +116,13 @@ def attach_policy_to_role(policy_arn, role_name):
       --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
       --role-name AirFormexEKSCNIRole
   """
-  pass
+  iam = boto3.client('iam')
+  response = client.attach_role_policy(
+    PolicyArn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
+    RoleName='AirFormexEKSCNIRole',
+  )
+
+  print(response)
 
 
 @utils.passmein
