@@ -144,28 +144,28 @@ def get_policy_doc(config_file_name):
 # 2. Create a cluster IAM role and attach the required Amazon EKS IAM managed policy to it. Kubernetes clusters managed by Amazon EKS make calls to other AWS services on your behalf to manage the resources that you use with the service.
 @utils.passmein
 def create_iam_role(eks_session, role_name, policy_file):
-  """Create a cluster IAM role.
-  
-  aws iam create-role \
-  --role-name AirFormexEKSClusterRole \
-  --assume-role-policy-document file://"airformex-cluster-role-trust-policy.json"
-
   """
-  role_name = 'AirFormexEKSClusterRole'
-  policy_file = get_policy_doc(policy_file)
-  return eks_session.iam().create_role(role_name, policy_file)
+  Create a cluster IAM role.
+  """
+  response = client.create_role(
+     RoleName='AirFormexEKSClusterRole',
+     AssumeRolePolicyDocument='file://"airformex-cluster-role-trust-policy.json"',
+  )
+#   Haili's code  
+#   role_name = 'AirFormexEKSClusterRole'
+#   policy_file = get_policy_doc(policy_file)
+#   return eks_session.iam().create_role(role_name, policy_file)
 
 
 @utils.passmein
 def attach_eks_iam():
-  """attach the required Amazon EKS IAM managed policy to it.
-  
-  Attach the required Amazon EKS managed IAM policy to the role.
-  aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
-  --role-name AirFormexEKSClusterRole
   """
-  pass
+  attach the required Amazon EKS IAM managed policy to it.
+  """
+  response = client.attach_role_policy(
+    RoleName='AirFormexEKSClusterRole',
+    PolicyArn='arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+   )
 
 
 def create_cluster_role_trust_policy(policy_file):
@@ -174,16 +174,7 @@ def create_cluster_role_trust_policy(policy_file):
   """
   pass
   
-  
-def create_cluster_iam_role():
-  """ # step 1.2.2 create cluster IAM role
-  
-   aws iam create-role \
-     --role-name AirFormexEKSClusterRole \
-     --assume-role-policy-document file://"airformex-cluster-role-trust-policy.json"
-
-  """   
-
+ 
  
 # Step 2: Configure to communicate with cluster
 @utils.passmein
