@@ -111,10 +111,6 @@ proxy_definitions = {
 def attach_policy_to_role(policy_arn, role_name):
   """
     Attach the required Amazon EKS managed IAM policy to a role.
-    e.g.
-    aws iam attach-role-policy \
-      --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
-      --role-name AirFormexEKSCNIRole
   """
   iam = boto3.client('iam')
   response = client.attach_role_policy(
@@ -127,12 +123,8 @@ def attach_policy_to_role(policy_arn, role_name):
 
 @utils.passmein
 def create_aws_vpc_stack():
-  """ # step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
-
-  aws cloudformation create-stack \
-    --stack-name airformex-eks-vpc-stack \
-    --template-url https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml
- 
+  """ 
+  step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
   """
   client = boto3.client('cloudformation')
   response = client.create_stack(
