@@ -211,21 +211,18 @@ def test_kube():
 @utils.passmein
 def create_vpc_cni_role(role_name, role_policy_document):
   """
-4.3.1 Create an IAM role for the Amazon VPC CNI plugin.
-aws iam create-role \
-  --role-name AirFormexEKSCNIRole \
-  --assume-role-policy-document file://"airformex-cni-role-trust-policy.json"
+  4.3.1 Create an IAM role for the Amazon VPC CNI plugin.
   """
-  pass
+  response = client.create_role(
+     RoleName='AirFormexEKSCNIRole',
+     AssumeRolePolicyDocument='file://"airformex-cni-role-trust-policy.json"',
+  )
 
 
 @utils.passmein
 def attach_policy_to_cni_role(policy_arn, role_name):
   """
-3.2 Attach the required Amazon EKS managed IAM policy to the role.
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
-  --role-name AirFormexEKSCNIRole
+  3.2 Attach the required Amazon EKS managed IAM policy to the role.
   """
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy', role_name='AirFormexEKSCNIRole')
 
@@ -241,24 +238,18 @@ def associate_svc_to_role(policy_arn, role_name):
 @utils.passmein
 def create_node_role(policy_arn, role_name):
   """
-4.3. Create a node IAM role and attach the required Amazon EKS IAM managed policy to it.
-b. Create the node IAM role.
-aws iam create-role \
-  --role-name AirFormexEKSNodeRole \
-  --assume-role-policy-document file://"airformex-node-role-trust-policy.json"
+  4.3. Create a node IAM role and attach the required Amazon EKS IAM managed policy to it.
+  b. Create the node IAM role.
   """
-  pass
+  response = client.create_role(
+     RoleName='AirFormexEKSNodeRole',
+     AssumeRolePolicyDocument='file://"airformex-node-role-trust-policy.json"',
+  )
 
 @utils.passmein
 def attach_policy_to_node_role(policy_arn, role_name):
-  """3.3 Attach the required Amazon EKS managed IAM policies to the role.
-    aws iam attach-role-policy \
-      --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy \
-      --role-name AirFormexEKSNodeRole
-
-    aws iam attach-role-policy \
-      --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
-      --role-name AirFormexEKSNodeRole
+  """
+  3.3 Attach the required Amazon EKS managed IAM policies to the role.
   """
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
