@@ -1,5 +1,5 @@
 # init eks
-# 
+#
 # reference:
 # 1. https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/eks.html
@@ -12,7 +12,7 @@
 
 import boto3
 
-import lib.utils
+import utils
 
 # Using environment variables
 ## Set configuration settings using system-wide environment variables. These configurations are global and will affect all clients created unless you override them with a Config object.
@@ -33,14 +33,19 @@ import lib.utils
 ## https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#installation
 from botocore.config import Config
 
+# def passmein(func):
+#     def wrapper(*args, **kwargs):
+#         return func(func, *args, **kwargs)
+#     return wrapper
 
 my_config = Config(
-#     region_name = 'us-west-2',
+    region_name = 'us-west-2',
     signature_version = 'v4',
     retries = {
         'max_attempts': 10,
         'mode': 'standard'
-    }
+    },
+
 )
 
 proxy_definitions = {
@@ -52,14 +57,14 @@ proxy_definitions = {
 # associate_identity_provider_config()
 # can_paginate()
 # create_addon()
-# ## 
+# ##
 # create_cluster()
 
 
 # create_fargate_profile()
 # create_nodegroup()
 # delete_addon()
-# ## 
+# ##
 # delete_cluster()
 
 # delete_fargate_profile()
@@ -83,14 +88,14 @@ proxy_definitions = {
 
 # list_addons()
 
-# ## 
+# ##
 # list_clusters()
 # list_fargate_profiles()
 # list_identity_provider_configs()
 # list_nodegroups()
 # list_tags_for_resource()
 
-# ## 
+# ##
 # list_updates()
 # tag_resource()
 
@@ -98,7 +103,7 @@ proxy_definitions = {
 # untag_resource()
 # update_addon()
 
-# ## 
+# ##
 # update_cluster_config()
 # update_cluster_version()
 
@@ -123,7 +128,7 @@ def attach_policy_to_role(policy_arn, role_name):
 
 @utils.passmein
 def create_aws_vpc_stack():
-  """ 
+  """
   step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
   """
   client = boto3.client('cloudformation')
@@ -138,8 +143,8 @@ def create_aws_vpc_stack():
 def get_policy_doc(config_file_name):
     """all config, cloudformation and template file are in backend/template."""
     ### ###
-    return ‘backend/template’ + config_file_name
-    
+    return 'backend/template' + config_file_name
+
 
 # 2. Create a cluster IAM role and attach the required Amazon EKS IAM managed policy to it. Kubernetes clusters managed by Amazon EKS make calls to other AWS services on your behalf to manage the resources that you use with the service.
 @utils.passmein
@@ -151,7 +156,7 @@ def create_iam_role(eks_session, role_name, policy_file):
      RoleName='AirFormexEKSClusterRole',
      AssumeRolePolicyDocument='file://"airformex-cluster-role-trust-policy.json"',
   )
-#   Haili's code  
+#   Haili's code
 #   role_name = 'AirFormexEKSClusterRole'
 #   policy_file = get_policy_doc(policy_file)
 #   return eks_session.iam().create_role(role_name, policy_file)
@@ -169,13 +174,13 @@ def attach_eks_iam():
 
 
 def create_cluster_role_trust_policy(policy_file):
-  """ # step 1.2.1 create the required Amazon EKS IAM managed policy 
+  """ # step 1.2.1 create the required Amazon EKS IAM managed policy
   policy_file=airformex-cluster-role-trust-policy.json
   """
   pass
-  
- 
- 
+
+
+
 # Step 2: Configure to communicate with cluster
 @utils.passmein
 def create_kubeconfig():
@@ -266,27 +271,30 @@ Node IAM role name – Choose AirFormexEKSNodeRole. In this getting started guid
 aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
     """
     pass
-  
+
   # 12. After several minutes, the Status in the Node Group configuration section will change from Creating to Active. Don't continue to the next step until the status is Active.
-  
-@utils.passmein 
+
+@utils.passmein
 def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetworkConfig, logging, clientRequestToken, tags, encryptionConfig):
-    """Create EKS cluster."""
+    """Create EKS cluster.
+       Step 2.1 create_eks_cluster
+       Null, currently creating via Console UI
+    """
     response = client.create_cluster(
         name=cluster_name,   # 'AirFormex-EKS',
         # version='string',  # Kubernetes version, optional, default latest version.
-        roleArn='string',  # The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to AWS API operations on your behalf. 
+        roleArn='string',  # The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to AWS API operations on your behalf.
         resourcesVpcConfig={  # read from https://github.com/akbopen/source/blob/main/backend/config/amazon-eks-vpc-private-subnets.yaml
             'subnetIds': [
-                'string', # 
+                'string', #
             ],
             'securityGroupIds': [
-                'string', # 
+                'string', #
             ],
             'endpointPublicAccess': True, # |False,
             'endpointPrivateAccess': True, # |False,
             'publicAccessCidrs': [
-                'string',  # 
+                'string',  #
             ]
         },
         kubernetesNetworkConfig={  # The Kubernetes network configuration for the cluster.
@@ -383,7 +391,7 @@ def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetw
     #     }
     # }
 
-    
+
 @utils.passmein
 def list_clusters(max_clusters=10, iter_marker=''):
     """List the Amazon EKS clusters in the AWS account's default region.
@@ -399,24 +407,18 @@ def list_clusters(max_clusters=10, iter_marker=''):
     clusters = eks.list_clusters(maxResults=max_clusters, nextToken=iter_marker)
     marker = clusters.get('nextToken')       # None if no more clusters to retrieve
     return clusters['clusters'], marker
-  
-  
-def attach_role_policy(): 
+
+
+def attach_role_policy():
    """
    Step 1.2.3 Attach the required Amazon EKS managed IAM policy to the role.
    aws iam attach-role-policy \
      --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
      --role-name AirFormexEKSClusterRole
    """
-    
-    
-def create_eks_cluster():
-   """
-   Step 2.1 create_eks_cluster
-   Null, currently creating via Console UI
-   """
- 
-    
+   pass
+
+
 def kubeconfig_update():
   """
   Step 2.2  Create or update a kubeconfig file for cluster.
@@ -424,20 +426,23 @@ def kubeconfig_update():
     --region ap-southeast-2 \
     --name AirFormex-EKS
   """
-  
+  pass
+
+
 
 def post_eks_create_test():
-  """ 
+  """
   step 2.3 Test configuration
-  kubectl get svc 
+  kubectl get svc
   # Need to collect output, will have to use SDK handler
   """
- 
+  pass
+
 
 def create_openid_connect_provider():
   """
   Step 2.4 create an IAM OpenID Connect (OIDC) provider, need to scope SDK
-  
+
   Current option, manual via Console:
   1. Hit Configuration from EKS cluster
   2. Copy value for OpenID Connect provider URL
@@ -445,17 +450,21 @@ def create_openid_connect_provider():
   4. Enable thumbprint
   5. Add sts.amazonaws.com for Audience
   """
-  
+  pass
 
-# Following for eks node creation 
+
+
+# Following for eks node creation
 def create_vpc_cni_plugin_iam_role():
-    """ 
+    """
     Step 4.1 Create an IAM role for the Amazon VPC CNI plugin
     aws iam create-role \
   --role-name AirFormexEKSCNIRole \
   --assume-role-policy-document file://"airformex-cni-role-trust-policy.json"
     """
-   
+    pass
+
+
 def attach_vpc_cni_trust_policy_to_eks_iam_role():
     """
     Step 4.2
@@ -463,14 +472,18 @@ def attach_vpc_cni_trust_policy_to_eks_iam_role():
   --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
   --role-name AirFormexEKSCNIRole
     """
-  
+    pass
+
+
 def associate_eks_account_to_eks_iam_role():
     """
     aws eks update-addon \
   --cluster-name AirFormex-EKS \
   --addon-name vpc-cni \
-  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole 
+  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole
     """
+    pass
+
 
 def create_node_iam_role():
     """
@@ -478,6 +491,8 @@ def create_node_iam_role():
   --role-name AirFormexEKSNodeRole \
   --assume-role-policy-document file://"airformex-node-role-trust-policy.json"
     """
+    pass
+
 
 def attach_eks_management_policy_to_eks_iam_role():
     """
@@ -489,12 +504,14 @@ aws iam attach-role-policy \
   --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
   --role-name AirFormexEKSNodeRole
     """
-    
- 
+    pass
+
+
 def create_eks_node_group():
     """
     Step 4.4 - 4.9 currently manual actions via Console, need to scope SDK
     """
+    pass
 
 
 def create_ec2_keypair():
@@ -502,35 +519,44 @@ def create_ec2_keypair():
     Step 4.10
     aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
     """
-   
+    pass
+
+
 def node_post_check():
+    """Step 4.11 review resource, polling stage
     """
-    Step 4.11 review resource, polling stage
-    """"
-    
+    pass
 
 
-  def main():
+def main():
 
     # Init EKS client
     client = boto3.client('eks', config=my_config)
- 
+
     # create cluster
-    resourcesVpcConfig = create_aws_vpc()
+    resourcesVpcConfig = create_aws_vpc_stack()
     create_iam_role()
     attach_eks_iam()
     create_kubeconfig()
     test_kube()
-    
+
     create_vpc_cni_role(role_name, role_policy_document)
     attach_policy_to_cni_role(policy_arn, role_name)
     associate_svc_to_role(policy_arn, role_name)
     create_node_role(policy_arn, role_name)
-    attach_policy_to_node_role(policy_arn, role_name):
-    add_node_group():
-    
-    response = create_eks_cluster(cluster_name='AirFormex-EKS', roleArn, resourcesVpcConfig, kubernetesNetworkConfig, logging, clientRequestToken, tags, encryptionConfig)
-    # list cluster  
+    attach_policy_to_node_role(policy_arn, role_name)
+    add_node_group()
+
+    response = create_eks_cluster(
+      cluster_name='AirFormex-EKS',
+      roleArn=roleArn,
+      resourcesVpcConfig=resourcesVpcConfig,
+      kubernetesNetworkConfig=kubernetesNetworkConfig,
+      logging=logging,
+      clientRequestToken=clientRequestToken,
+      tags=tags,
+      encryptionConfig=encryptionConfig)
+    # list cluster
     clusters, marker = list_clusters()
     if not clusters:
         print('No clusters exist.')
@@ -556,7 +582,7 @@ def node_post_check():
 # def create_eks_node_group():
 # def create_ec2_keypair():
 # def node_post_check():
-            
+
 if __name__ == '__main__':
     main()
 
