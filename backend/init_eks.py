@@ -53,65 +53,6 @@ proxy_definitions = {
     'https': 'https://proxy.amazon.org:2010'
 }
 
-# associate_encryption_config()
-# associate_identity_provider_config()
-# can_paginate()
-# create_addon()
-# ##
-# create_cluster()
-
-
-# create_fargate_profile()
-# create_nodegroup()
-# delete_addon()
-# ##
-# delete_cluster()
-
-# delete_fargate_profile()
-# delete_nodegroup()
-
-
-# describe_addon()
-# describe_addon_versions()
-# describe_cluster()
-# describe_fargate_profile()
-# describe_identity_provider_config()
-# describe_nodegroup()
-# describe_update()
-
-
-# disassociate_identity_provider_config()
-# generate_presigned_url()
-# get_paginator()
-# get_waiter()
-
-
-# list_addons()
-
-# ##
-# list_clusters()
-# list_fargate_profiles()
-# list_identity_provider_configs()
-# list_nodegroups()
-# list_tags_for_resource()
-
-# ##
-# list_updates()
-# tag_resource()
-
-
-# untag_resource()
-# update_addon()
-
-# ##
-# update_cluster_config()
-# update_cluster_version()
-
-# update_nodegroup_config()
-# update_nodegroup_version()
-
-#####################
-## helper functions
 
 def attach_policy_to_role(policy_arn, role_name):
   """
@@ -586,5 +527,61 @@ def main():
 if __name__ == '__main__':
     main()
 
+#####################
+## helper functions
+# associate_encryption_config()
+# associate_identity_provider_config()
+# can_paginate()
+# create_addon()
+# ##
+# create_cluster()
 
 
+# create_fargate_profile()
+# create_nodegroup()
+# delete_addon()
+# ##
+# delete_cluster()
+
+# delete_fargate_profile()
+# delete_nodegroup()
+
+
+# describe_addon()
+# describe_addon_versions()
+# describe_cluster()
+# describe_fargate_profile()
+# describe_identity_provider_config()
+# describe_nodegroup()
+# describe_update()
+
+
+# disassociate_identity_provider_config()
+# generate_presigned_url()
+# get_paginator()
+# get_waiter()
+
+
+# list_addons()
+
+# ##
+# list_clusters()
+# list_fargate_profiles()
+# list_identity_provider_configs()
+# list_nodegroups()
+# list_tags_for_resource()
+
+# ##
+# list_updates()
+# tag_resource()
+
+
+# untag_resource()
+# update_addon()
+
+# ##
+# update_cluster_config()
+# update_cluster_version()
+
+# update_nodegroup_config()
+# update_nodegroup_version()
