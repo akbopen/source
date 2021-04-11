@@ -11,7 +11,6 @@
 ## pip install boto3
 
 import boto3
-
 import utils
 
 # Using environment variables
@@ -54,19 +53,14 @@ proxy_definitions = {
 }
 
 
-def attach_policy_to_role(policy_arn, role_name):
-  """
-    Attach the required Amazon EKS managed IAM policy to a role.
-  """
-  iam = boto3.client('iam')
-  response = client.attach_role_policy(
-    PolicyArn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
-    RoleName='AirFormexEKSCNIRole',
-  )
-
-  print(response)
+def get_policy_doc(config_file_name):
+    """all config, cloudformation and template file are in backend/template."""
+    ### ###
+    return 'backend/template' + config_file_name
 
 
+############################################# Start #############################################
+#Step 1
 @utils.passmein
 def create_aws_vpc_stack():
   """
@@ -77,19 +71,19 @@ def create_aws_vpc_stack():
      StackName='airformex-eks-vpc-stack',
      TemplateURL='https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml',
   )
-
   print(response)
 
 
-def get_policy_doc(config_file_name):
-    """all config, cloudformation and template file are in backend/template."""
-    ### ###
-    return 'backend/template' + config_file_name
-
-
 # 2. Create a cluster IAM role and attach the required Amazon EKS IAM managed policy to it. Kubernetes clusters managed by Amazon EKS make calls to other AWS services on your behalf to manage the resources that you use with the service.
+def create_cluster_role_trust_policy(policy_file):
+  """ # step 1.2.1 create the required Amazon EKS IAM managed policy
+  policy_file=airformex-cluster-role-trust-policy.json
+  """
+  pass
+
+
 @utils.passmein
-def create_iam_role(eks_session, role_name, policy_file):
+def create_iam_role(eks_session, role_name, policy_file):  <<< for create new iam role, do we need role name as variable or not?
   """
   Create a cluster IAM role.
   """
@@ -113,107 +107,6 @@ def attach_eks_iam():
     PolicyArn='arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
    )
 
-
-def create_cluster_role_trust_policy(policy_file):
-  """ # step 1.2.1 create the required Amazon EKS IAM managed policy
-  policy_file=airformex-cluster-role-trust-policy.json
-  """
-  pass
-
-
-
-# Step 2: Configure to communicate with cluster
-@utils.passmein
-def create_kubeconfig():
-  """
-2.1. Create or update a kubeconfig file for cluster.
-aws eks update-kubeconfig \
-  --region ap-southeast-2 \
-  --name AirFormex-EKS
-  """
-  pass
-
-
-@utils.passmein
-def test_kube():
-  """
-2.2. Test configuration
-kubectl get svc
-  """
-  pass
-
-
-# Step 3: Create IAM OpenID Connect (OIDC) provider
-
-@utils.passmein
-def test_kube():
-  """
-3. Create an IAM OpenID Connect (OIDC) provider for your cluster so that Kubernetes service accounts used by workloads can access AWS resources. You only need to complete this step one time for a cluster.
-  """
-  pass
-
-
-# Step 4: Create nodes
-@utils.passmein
-def create_vpc_cni_role(role_name, role_policy_document):
-  """
-  4.3.1 Create an IAM role for the Amazon VPC CNI plugin.
-  """
-  response = client.create_role(
-     RoleName='AirFormexEKSCNIRole',
-     AssumeRolePolicyDocument='file://"airformex-cni-role-trust-policy.json"',
-  )
-
-
-@utils.passmein
-def attach_policy_to_cni_role(policy_arn, role_name):
-  """
-  3.2 Attach the required Amazon EKS managed IAM policy to the role.
-  """
-  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy', role_name='AirFormexEKSCNIRole')
-
-
-@utils.passmein
-def associate_svc_to_role(policy_arn, role_name):
-  """
-3.2. Associate the Kubernetes service account used by the VPC CNI plugin to the IAM role.
-  """
-  pass
-
-
-@utils.passmein
-def create_node_role(policy_arn, role_name):
-  """
-  4.3. Create a node IAM role and attach the required Amazon EKS IAM managed policy to it.
-  b. Create the node IAM role.
-  """
-  response = client.create_role(
-     RoleName='AirFormexEKSNodeRole',
-     AssumeRolePolicyDocument='file://"airformex-node-role-trust-policy.json"',
-  )
-
-@utils.passmein
-def attach_policy_to_node_role(policy_arn, role_name):
-  """
-  3.3 Attach the required Amazon EKS managed IAM policies to the role.
-  """
-  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
-  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
-
-
-  @utils.passmein
-  def add_node_group():
-    """4.3.
-    7. On the Configuration tab, select the Compute tab, and then choose Add Node Group.
-    8. On the Configure node group page, fill out the parameters accordingly, accept the remaining default values, and then choose Next.
-Name – Enter a unique name for your managed node group, AirFormex-EKS-Nodegroup.
-Node IAM role name – Choose AirFormexEKSNodeRole. In this getting started guide, this role must only be used for this node group and no other node groups.
-10. On the Specify networking page, select an existing key pair to use for SSH key pair and then choose Next.
-aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
-    """
-    pass
-
-  # 12. After several minutes, the Status in the Node Group configuration section will change from Creating to Active. Don't continue to the next step until the status is Active.
 
 @utils.passmein
 def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetworkConfig, logging, clientRequestToken, tags, encryptionConfig):
@@ -350,25 +243,26 @@ def list_clusters(max_clusters=10, iter_marker=''):
     return clusters['clusters'], marker
 
 
-def attach_role_policy():
-   """
-   Step 1.2.3 Attach the required Amazon EKS managed IAM policy to the role.
-   aws iam attach-role-policy \
-     --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
-     --role-name AirFormexEKSClusterRole
-   """
-   pass
-
-
-def kubeconfig_update():
+# Step 2: Configure to communicate with cluster
+@utils.passmein
+def create_kubeconfig(): <<< do we really need this step via SDK?
   """
-  Step 2.2  Create or update a kubeconfig file for cluster.
-  aws eks update-kubeconfig \
-    --region ap-southeast-2 \
-    --name AirFormex-EKS
+2.1. Create or update a kubeconfig file for cluster.
+  """
+aws eks update-kubeconfig \
+  --region ap-southeast-2 \
+  --name AirFormex-EKS
   """
   pass
 
+
+@utils.passmein
+def test_kube():
+  """
+  2.2. Test configuration
+  kubectl get svc
+  """
+  pass
 
 
 def post_eks_create_test():
@@ -378,11 +272,14 @@ def post_eks_create_test():
   # Need to collect output, will have to use SDK handler
   """
   pass
+  
 
+# Step 3: Create IAM OpenID Connect (OIDC) provider
+@utils.passmein
 
 def create_openid_connect_provider():
   """
-  Step 2.4 create an IAM OpenID Connect (OIDC) provider, need to scope SDK
+  Step 3. create an IAM OpenID Connect (OIDC) provider, need to scope SDK
 
   Current option, manual via Console:
   1. Hit Configuration from EKS cluster
@@ -394,63 +291,69 @@ def create_openid_connect_provider():
   pass
 
 
+# Step 4: Create nodes
+@utils.passmein
+def create_vpc_cni_role(role_name, role_policy_document):
+  """
+  4.2.1 Create an IAM role for the Amazon VPC CNI plugin.
+  """
+  response = client.create_role(
+     RoleName='AirFormexEKSCNIRole',
+     AssumeRolePolicyDocument='file://"airformex-cni-role-trust-policy.json"',
+  )
+  
+    
+@utils.passmein
+def attach_policy_to_cni_role(policy_arn, role_name):
+  """
+  4.2.2 Attach the required Amazon EKS managed IAM policy to the role.
+  """
+  response = attach_policy_to_role(
+     policy_arn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
+     role_name='AirFormexEKSCNIRole'
+  )
 
-# Following for eks node creation
-def create_vpc_cni_plugin_iam_role():
-    """
-    Step 4.1 Create an IAM role for the Amazon VPC CNI plugin
-    aws iam create-role \
-  --role-name AirFormexEKSCNIRole \
-  --assume-role-policy-document file://"airformex-cni-role-trust-policy.json"
-    """
-    pass
 
-
-def attach_vpc_cni_trust_policy_to_eks_iam_role():
-    """
-    Step 4.2
-    aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy \
-  --role-name AirFormexEKSCNIRole
-    """
-    pass
-
-
-def associate_eks_account_to_eks_iam_role():
-    """
-    aws eks update-addon \
+@utils.passmein
+def associate_svc_to_role(policy_arn, role_name):
+  """
+  4.2.3. Associate the Kubernetes service account used by the VPC CNI plugin to the IAM role.
+  aws eks update-addon \
   --cluster-name AirFormex-EKS \
   --addon-name vpc-cni \
-  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole
-    """
-    pass
+  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole 
+  """
+  pass
 
 
-def create_node_iam_role():
-    """
-    aws iam create-role \
-  --role-name AirFormexEKSNodeRole \
-  --assume-role-policy-document file://"airformex-node-role-trust-policy.json"
-    """
-    pass
+@utils.passmein
+def create_node_role(policy_arn, role_name):
+  """
+  4.3.1 Create a node IAM role and attach the required Amazon EKS IAM managed policy to it.
+  4.3.2 Create the node IAM role.
+  """
+  response = client.create_role(
+     RoleName='AirFormexEKSNodeRole',
+     AssumeRolePolicyDocument='file://"airformex-node-role-trust-policy.json"',
+  )
 
 
-def attach_eks_management_policy_to_eks_iam_role():
-    """
-    Step 4.3
-    aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy \
-  --role-name AirFormexEKSNodeRole
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly \
-  --role-name AirFormexEKSNodeRole
-    """
-    pass
+@utils.passmein
+def attach_policy_to_node_role(policy_arn, role_name):
+  """
+  4.3.3 Attach the required Amazon EKS managed IAM policies to the role.
+  """
+  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
+  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
 
 
 def create_eks_node_group():
     """
     Step 4.4 - 4.9 currently manual actions via Console, need to scope SDK
+    On the Configuration tab, select the Compute tab, and then choose Add Node Group.
+    On the Configure node group page, fill out the parameters accordingly, accept the remaining default values, and then choose Next.
+Name – Enter a unique name for your managed node group, AirFormex-EKS-Nodegroup.
+Node IAM role name – Choose AirFormexEKSNodeRole. In this getting started guide, this role must only be used for this node group and no other node groups.
     """
     pass
 
@@ -467,6 +370,10 @@ def node_post_check():
     """Step 4.11 review resource, polling stage
     """
     pass
+
+
+# 12. After several minutes, the Status in the Node Group configuration section will change from Creating to Active. Don't continue to the next step until the status is Active.
+
 
 
 def main():
