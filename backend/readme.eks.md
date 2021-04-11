@@ -1,4 +1,4 @@
-
+```sh
 # python3 -m venv .env
 source .env/bin/activate
 ## pip install boto3
@@ -11,3 +11,4 @@ source .env/bin/activate
 cd source
 
 python backend/init_eks.py
+```
