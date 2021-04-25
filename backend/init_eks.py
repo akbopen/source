@@ -6,12 +6,8 @@
 # 2. https://pypi.org/project/aws-cdk.aws-eks/
 # 3. https://github.com/akbopen/kb/blob/master/deploy_eks.md
 
-
 # Installation
 ## pip install boto3
-
-import boto3
-import utils
 
 # Using environment variables
 ## Set configuration settings using system-wide environment variables. These configurations are global and will affect all clients created unless you override them with a Config object.
@@ -30,7 +26,6 @@ import utils
 
 # Configuation
 ## https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#installation
-from botocore.config import Config
 
 # def passmein(func):
 #     def wrapper(*args, **kwargs):
@@ -74,7 +69,6 @@ def create_aws_vpc_stack():
   print(response)
 
 
-# 2. Create a cluster IAM role and attach the required Amazon EKS IAM managed policy to it. Kubernetes clusters managed by Amazon EKS make calls to other AWS services on your behalf to manage the resources that you use with the service.
 def create_cluster_role_trust_policy(policy_file):
   """ # step 1.2.1 create the required Amazon EKS IAM managed policy
   policy_file=airformex-cluster-role-trust-policy.json
