@@ -183,6 +183,63 @@ def create_kubeconfig():
     --name AirFormex-EKS
   pass
 
+      
+@utils.passmein
+def update_kubeconfig():
+# Set up the client
+s = boto3.Session(region_name=region)
+eks = s.client("eks")
+
+# get cluster details
+cluster = eks.describe_cluster(name=cluster_name)
+cluster_cert = cluster["cluster"]["certificateAuthority"]["data"]
+cluster_ep = cluster["cluster"]["endpoint"]
+
+# build the cluster config hash
+cluster_config = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [
+            {
+                "cluster": {
+                    "server": str(cluster_ep),
+                    "certificate-authority-data": str(cluster_cert)
+                },
+                "name": "kubernetes"
+            }
+        ],
+        "contexts": [
+            {
+                "context": {
+                    "cluster": "kubernetes",
+                    "user": "aws"
+                },
+                "name": "aws"
+            }
+        ],
+        "current-context": "aws",
+        "preferences": {},
+        "users": [
+            {
+                "name": "aws",
+                "user": {
+                    "exec": {
+                        "apiVersion": "client.authentication.k8s.io/v1alpha1",
+                        "command": "heptio-authenticator-aws",
+                        "args": [
+                            "token", "-i", cluster_name
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+
+# Write in YAML.
+config_text=yaml.dump(cluster_config, default_flow_style=False)
+open(config_file, "w").write(config_text)
+
+        
 
 @utils.passmein
 def test_kube():
