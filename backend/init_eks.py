@@ -1,37 +1,3 @@
-# init eks
-#
-# reference:
-# 1. https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/eks.html
-# 2. https://pypi.org/project/aws-cdk.aws-eks/
-# 3. https://github.com/akbopen/kb/blob/master/deploy_eks.md
-
-# Installation
-## pip install boto3
-
-# Using environment variables
-## Set configuration settings using system-wide environment variables. These configurations are global and will affect all clients created unless you override them with a Config object.
-# AWS_ACCESS_KEY_ID
-# The access key for your AWS account.
-# AWS_SECRET_ACCESS_KEY
-# The secret key for your AWS account.
-# AWS_SESSION_TOKEN
-# The session key for your AWS account. This is only needed when you are using temporary credentials. The AWS_SECURITY_TOKEN environment variable can also be used, but is only supported for backward-compatibility purposes. AWS_SESSION_TOKEN is supported by multiple AWS SDKs in addition to Boto3.
-# AWS_DEFAULT_REGION
-# The default AWS Region to use, for example, us-west-1 or us-west-2.
-# AWS_PROFILE
-# The default profile to use, if any. If no value is specified, Boto3 attempts to search the shared credentials file and the config file for the default profile.
-# AWS_CONFIG_FILE
-# The location of the config file used by Boto3. By default this value is ~/.aws/config. You only need to set this variable if you want to change this location.
-
-# Configuation
-## https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#installation
-
-# def passmein(func):
-#     def wrapper(*args, **kwargs):
-#         return func(func, *args, **kwargs)
-#     return wrapper
-
 my_config = Config(
     region_name = 'us-west-2',
     signature_version = 'v4',
@@ -54,13 +20,8 @@ def get_policy_doc(config_file_name):
     return 'backend/template' + config_file_name
 
 
-############################################# Start #############################################
-#Step 1
 @utils.passmein
 def create_aws_vpc_stack():
-  """
-  step 1.1 Create an Amazon VPC with public and private subnets that meets Amazon EKS requirements.
-  """
   client = boto3.client('cloudformation')
   response = client.create_stack(
      StackName='airformex-eks-vpc-stack',
@@ -69,33 +30,23 @@ def create_aws_vpc_stack():
   print(response)
 
 
+@utils.passmein
 def create_cluster_role_trust_policy(policy_file):
-  """ # step 1.2.1 create the required Amazon EKS IAM managed policy
-  policy_file=airformex-cluster-role-trust-policy.json
-  """
-  pass
+    response = client.create_policy(
+        PolicyName='airformex-cluster-role-trust-policy',
+        policy_file=airformex-cluster-role-trust-policy.json
 
 
 @utils.passmein
-def create_iam_role(eks_session, role_name, policy_file):  <<< for create new iam role, do we need role name as variable or not?
-  """
-  Create a cluster IAM role.
-  """
+def create_iam_role(eks_session, role_name, policy_file):
   response = client.create_role(
      RoleName='AirFormexEKSClusterRole',
      AssumeRolePolicyDocument='file://"airformex-cluster-role-trust-policy.json"',
   )
-#   Haili's code
-#   role_name = 'AirFormexEKSClusterRole'
-#   policy_file = get_policy_doc(policy_file)
-#   return eks_session.iam().create_role(role_name, policy_file)
 
 
 @utils.passmein
 def attach_eks_iam():
-  """
-  attach the required Amazon EKS IAM managed policy to it.
-  """
   response = client.attach_role_policy(
     RoleName='AirFormexEKSClusterRole',
     PolicyArn='arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
@@ -104,10 +55,6 @@ def attach_eks_iam():
 
 @utils.passmein
 def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetworkConfig, logging, clientRequestToken, tags, encryptionConfig):
-    """Create EKS cluster.
-       Step 2.1 create_eks_cluster
-       Null, currently creating via Console UI
-    """
     response = client.create_cluster(
         name=cluster_name,   # 'AirFormex-EKS',
         # version='string',  # Kubernetes version, optional, default latest version.
@@ -222,14 +169,6 @@ def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetw
 
 @utils.passmein
 def list_clusters(max_clusters=10, iter_marker=''):
-    """List the Amazon EKS clusters in the AWS account's default region.
-    :param max_clusters: Maximum number of clusters to retrieve.
-    :param iter_marker: Marker used to identify start of next batch of clusters to retrieve
-    :return: List of cluster names
-    :return: String marking the start of next batch of clusters to retrieve. Pass this string as the iter_marker
-        argument in the next invocation of list_clusters().
-    """
-
     eks = boto3.client('eks')
 
     clusters = eks.list_clusters(maxResults=max_clusters, nextToken=iter_marker)
@@ -237,71 +176,37 @@ def list_clusters(max_clusters=10, iter_marker=''):
     return clusters['clusters'], marker
 
 
-# Step 2: Configure to communicate with cluster
 @utils.passmein
-def create_kubeconfig(): <<< do we really need this step via SDK?
-  """
-2.1. Create or update a kubeconfig file for cluster.
-  """
-aws eks update-kubeconfig \
-  --region ap-southeast-2 \
-  --name AirFormex-EKS
-  """
+def create_kubeconfig():
+    aws eks update-kubeconfig \
+    --region ap-southeast-2 \
+    --name AirFormex-EKS
   pass
 
 
 @utils.passmein
 def test_kube():
   """
-  2.2. Test configuration
   kubectl get svc
   """
   pass
 
-
-def post_eks_create_test():
-  """
-  step 2.3 Test configuration
-  kubectl get svc
-  # Need to collect output, will have to use SDK handler
-  """
-  pass
   
-
-# Step 3: Create IAM OpenID Connect (OIDC) provider
 @utils.passmein
-
 def create_openid_connect_provider():
-  """
-  Step 3. create an IAM OpenID Connect (OIDC) provider, need to scope SDK
-
-  Current option, manual via Console:
-  1. Hit Configuration from EKS cluster
-  2. Copy value for OpenID Connect provider URL
-  3. Add IAM Identity provider with OpenID Connect, give URL from EKS cluster
-  4. Enable thumbprint
-  5. Add sts.amazonaws.com for Audience
-  """
   pass
 
 
-# Step 4: Create nodes
 @utils.passmein
 def create_vpc_cni_role(role_name, role_policy_document):
-  """
-  4.2.1 Create an IAM role for the Amazon VPC CNI plugin.
-  """
   response = client.create_role(
      RoleName='AirFormexEKSCNIRole',
      AssumeRolePolicyDocument='file://"airformex-cni-role-trust-policy.json"',
   )
   
-    
+
 @utils.passmein
 def attach_policy_to_cni_role(policy_arn, role_name):
-  """
-  4.2.2 Attach the required Amazon EKS managed IAM policy to the role.
-  """
   response = attach_policy_to_role(
      policy_arn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
      role_name='AirFormexEKSCNIRole'
@@ -310,22 +215,15 @@ def attach_policy_to_cni_role(policy_arn, role_name):
 
 @utils.passmein
 def associate_svc_to_role(policy_arn, role_name):
-  """
-  4.2.3. Associate the Kubernetes service account used by the VPC CNI plugin to the IAM role.
   aws eks update-addon \
   --cluster-name AirFormex-EKS \
   --addon-name vpc-cni \
   --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole 
-  """
   pass
 
 
 @utils.passmein
 def create_node_role(policy_arn, role_name):
-  """
-  4.3.1 Create a node IAM role and attach the required Amazon EKS IAM managed policy to it.
-  4.3.2 Create the node IAM role.
-  """
   response = client.create_role(
      RoleName='AirFormexEKSNodeRole',
      AssumeRolePolicyDocument='file://"airformex-node-role-trust-policy.json"',
@@ -334,40 +232,21 @@ def create_node_role(policy_arn, role_name):
 
 @utils.passmein
 def attach_policy_to_node_role(policy_arn, role_name):
-  """
-  4.3.3 Attach the required Amazon EKS managed IAM policies to the role.
-  """
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
   response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
 
 
 def create_eks_node_group():
-    """
-    Step 4.4 - 4.9 currently manual actions via Console, need to scope SDK
-    On the Configuration tab, select the Compute tab, and then choose Add Node Group.
-    On the Configure node group page, fill out the parameters accordingly, accept the remaining default values, and then choose Next.
-Name – Enter a unique name for your managed node group, AirFormex-EKS-Nodegroup.
-Node IAM role name – Choose AirFormexEKSNodeRole. In this getting started guide, this role must only be used for this node group and no other node groups.
-    """
     pass
 
 
 def create_ec2_keypair():
-    """
-    Step 4.10
     aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
-    """
     pass
 
 
 def node_post_check():
-    """Step 4.11 review resource, polling stage
-    """
     pass
-
-
-# 12. After several minutes, the Status in the Node Group configuration section will change from Creating to Active. Don't continue to the next step until the status is Active.
-
 
 
 def main():
@@ -413,20 +292,54 @@ def main():
                 break
             clusters, marker = list_clusters(iter_marker=marker)
 
-# def kubeconfig_update():
-# def post_eks_create_test():
-# def create_openid_connect_provider():
-# def create_vpc_cni_plugin_iam_role():
-# def attach_vpc_cni_trust_policy_to_eks_iam_role():
-# def associate_eks_account_to_eks_iam_role():
-# def create_node_iam_role():
-# def attach_eks_management_policy_to_eks_iam_role():
-# def create_eks_node_group():
-# def create_ec2_keypair():
-# def node_post_check():
+    kubeconfig_update():
+    create_openid_connect_provider():
+    create_vpc_cni_plugin_iam_role():
+    attach_vpc_cni_trust_policy_to_eks_iam_role():
+    associate_eks_account_to_eks_iam_role():
+    create_node_iam_role():
+    attach_eks_management_policy_to_eks_iam_role():
+    create_eks_node_group():
+    create_ec2_keypair():
+    node_post_check():
 
 if __name__ == '__main__':
     main()
+
+
+# init eks
+#
+# reference:
+# 1. https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
+# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/eks.html
+# 2. https://pypi.org/project/aws-cdk.aws-eks/
+# 3. https://github.com/akbopen/kb/blob/master/deploy_eks.md
+
+# Installation
+## pip install boto3
+
+# Using environment variables
+## Set configuration settings using system-wide environment variables. These configurations are global and will affect all clients created unless you override them with a Config object.
+# AWS_ACCESS_KEY_ID
+# The access key for your AWS account.
+# AWS_SECRET_ACCESS_KEY
+# The secret key for your AWS account.
+# AWS_SESSION_TOKEN
+# The session key for your AWS account. This is only needed when you are using temporary credentials. The AWS_SECURITY_TOKEN environment variable can also be used, but is only supported for backward-compatibility purposes. AWS_SESSION_TOKEN is supported by multiple AWS SDKs in addition to Boto3.
+# AWS_DEFAULT_REGION
+# The default AWS Region to use, for example, us-west-1 or us-west-2.
+# AWS_PROFILE
+# The default profile to use, if any. If no value is specified, Boto3 attempts to search the shared credentials file and the config file for the default profile.
+# AWS_CONFIG_FILE
+# The location of the config file used by Boto3. By default this value is ~/.aws/config. You only need to set this variable if you want to change this location.
+
+# Configuation
+## https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#installation
+
+# def passmein(func):
+#     def wrapper(*args, **kwargs):
+#         return func(func, *args, **kwargs)
+#     return wrapper
 
 #####################
 ## helper functions
@@ -434,20 +347,13 @@ if __name__ == '__main__':
 # associate_identity_provider_config()
 # can_paginate()
 # create_addon()
-# ##
 # create_cluster()
-
-
 # create_fargate_profile()
 # create_nodegroup()
 # delete_addon()
-# ##
 # delete_cluster()
-
 # delete_fargate_profile()
 # delete_nodegroup()
-
-
 # describe_addon()
 # describe_addon_versions()
 # describe_cluster()
@@ -455,34 +361,21 @@ if __name__ == '__main__':
 # describe_identity_provider_config()
 # describe_nodegroup()
 # describe_update()
-
-
 # disassociate_identity_provider_config()
 # generate_presigned_url()
 # get_paginator()
 # get_waiter()
-
-
 # list_addons()
-
-# ##
 # list_clusters()
 # list_fargate_profiles()
 # list_identity_provider_configs()
 # list_nodegroups()
 # list_tags_for_resource()
-
-# ##
 # list_updates()
 # tag_resource()
-
-
 # untag_resource()
 # update_addon()
-
-# ##
 # update_cluster_config()
 # update_cluster_version()
-
 # update_nodegroup_config()
 # update_nodegroup_version()
