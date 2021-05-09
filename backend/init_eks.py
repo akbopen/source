@@ -1,177 +1,117 @@
+import boto3
+import uuid
+from source.backend.helpers import *
+
+# define boto3 client
+eksclient = boto3.client('eks')
+iamclient = boto3.client('iam')
+cfnclient = boto3.client('cloudformation')
+
+# Set up the client
+ekssession = boto3.Session(region_name=REGION_NAME)
+eks = ekssession.client('eks')
+
+
+# define aws config
 my_config = Config(
     region_name = 'us-west-2',
     signature_version = 'v4',
-    retries = {
-        'max_attempts': 10,
-        'mode': 'standard'
-    },
-
+    retries = {'max_attempts': 10, 'mode': 'standard'}
 )
 
+# define proxy ?
 proxy_definitions = {
     'http': 'http://proxy.amazon.com:6502',
     'https': 'https://proxy.amazon.org:2010'
 }
 
 
+CFN_STACK_NAME = 'airformex-eks-vpc-stack'
+CFN_TEMP_URL = 'https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml'
+ROLE_TRUST_POLICY_NAME = 'airformex-cluster-role-trust-policy'
+ROLE_TRUST_POLICY_FILE = 'airformex-cluster-role-trust-policy.json'
+ROLE_NAME = 'AirFormexEKSClusterRole'
+ROLE_POLICY_DOC = 'airformex-cluster-role-trust-policy.json'
+ROLE_POLICY_NAME = 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+EKS_CLUSTER_NAME = 'AirFormex-EKS'
+EKS_CLUSTER_VERSION = 'string' # optional
+EKS_CLUSTER_ROLE_ARN = ''
+EKS_CLUSTER_RESOURCE_VPC = 'amazon-eks-vpc-private-subnets.yaml'
+MAX_CLUSTERS = 10
+ITER_MAKER = ''
+REGION_NAME = 'ap-southeast-2'
+CNI_ROLE_POLICY_DOC = 'airformex-cni-role-trust-policy.json'
+CNI_ROLE_NAME = 'AirFormexEKSCNIRole'
+CNI_ROLE_POLICY_NAME = 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
+CNI_ROLE_ARN = 'arn:aws:iam::213397327449:role/AirFormexEKSCNIRole'
+EKS_CLUSTER_NODE_ROLE = 'AirFormexEKSNodeRole'
+EKS_CLUSTER_NODE_ROLE_POLICY_DOC = 'airformex-node-role-trust-policy.json'
+EKS_CLUSTER_NODE_ROLE_WORKER_POLICY_ARN = 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+EKS_CLUSTER_NODE_ROLE_CONTAINER_POLICY_ARN = 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+KEY_NAME = 'AirFormexKeyPair'
+
+
 def get_policy_doc(config_file_name):
-    """all config, cloudformation and template file are in backend/template."""
-    ### ###
     return 'backend/template' + config_file_name
 
 
 @utils.passmein
-def create_aws_vpc_stack():
-  client = boto3.client('cloudformation')
-  response = client.create_stack(
-     StackName='airformex-eks-vpc-stack',
-     TemplateURL='https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml',
+def create_aws_vpc_stack(cfnclient, CFN_STACK_NAME, CFN_TEMP_URL):
+  response = cfnclient.create_stack(
+     StackName=CFN_STACK_NAME,
+     TemplateURL=CFN_TEMP_URL,
   )
   print(response)
 
 
 @utils.passmein
-def create_cluster_role_trust_policy(policy_file):
-    response = client.create_policy(
-        PolicyName='airformex-cluster-role-trust-policy',
-        policy_file=airformex-cluster-role-trust-policy.json
+def create_cluster_role_trust_policy(
+    iamclient,
+    ROLE_TRUST_POLICY_NAME,
+    ROLE_TRUST_POLICY_FILE
+):
+    response = iamclient.create_policy(
+        PolicyName=ROLE_TRUST_POLICY_NAME,
+        policy_file=ROLE_TRUST_POLICY_FILE,
+   )
+   print(response)
 
 
 @utils.passmein
-def create_iam_role(eks_session, role_name, policy_file):
-  response = client.create_role(
-     RoleName='AirFormexEKSClusterRole',
-     AssumeRolePolicyDocument='file://"airformex-cluster-role-trust-policy.json"',
+def create_iam_role(iamclient, ROLE_NAME, ROLE_POLICY_DOC):
+  response = iamclient.create_role(ROLE_NAME, ROLE_POLICY_DOC)
+     RoleName=ROLE_NAME,
+     AssumeRolePolicyDocument=ROLE_POLICY_DOC,
   )
 
 
 @utils.passmein
-def attach_eks_iam():
-  response = client.attach_role_policy(
-    RoleName='AirFormexEKSClusterRole',
-    PolicyArn='arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+def attach_eks_iam(iamclient, ROLE_NAME, ROLE_POLICY_NAME):
+  response = iamclient.attach_role_policy(ROLE_NAME, ROLE_POLICY_NAME)
+    RoleName=ROLE_NAME,
+    PolicyArn=ROLE_POLICY_NAME,
    )
 
 
 @utils.passmein
-def create_eks_cluster(cluster_name, roleArn, resourcesVpcConfig, kubernetesNetworkConfig, logging, clientRequestToken, tags, encryptionConfig):
-    response = client.create_cluster(
-        name=cluster_name,   # 'AirFormex-EKS',
-        # version='string',  # Kubernetes version, optional, default latest version.
-        roleArn='string',  # The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to AWS API operations on your behalf.
-        resourcesVpcConfig={  # read from https://github.com/akbopen/source/blob/main/backend/config/amazon-eks-vpc-private-subnets.yaml
-            'subnetIds': [
-                'string', #
-            ],
-            'securityGroupIds': [
-                'string', #
-            ],
-            'endpointPublicAccess': True, # |False,
-            'endpointPrivateAccess': True, # |False,
-            'publicAccessCidrs': [
-                'string',  #
-            ]
-        },
-        kubernetesNetworkConfig={  # The Kubernetes network configuration for the cluster.
-            'serviceIpv4Cidr': 'string'
-        },
-        logging={  # Enable or disable exporting the Kubernetes control plane logs for your cluster to CloudWatch Logs. By default, cluster control plane logs aren't exported to CloudWatch Logs
-            'clusterLogging': [
-                {
-                    'types': [
-                        'api', # |'audit'|'authenticator'|'controllerManager'|'scheduler',
-                    ],
-                    'enabled': True
-                },
-            ]
-        },
-        clientRequestToken='string',   # read from env/config
-        tags={
-            'string': 'string'
-        },
-        encryptionConfig=[
-            {
-                'resources': [
-                    'string',
-                ],
-                'provider': {
-                    'keyArn': 'string'
-                }
-            },
-        ]
+def create_eks_cluster(
+    eksclient,
+    EKS_CLUSTER_NAME,
+    EKS_CLUSTER_VERSION,
+    EKS_CLUSTER_ROLE_ARN,
+    EKS_CLUSTER_RESOURCE_VPC,
+):
+    response = eksclient.create_cluster( # details see bottom Appendix: Response Syntax
+        name=EKS_CLUSTER_NAME,
+        version=EKS_CLUSTER_VERSION,
+        roleArn=EKS_CLUSTER_ROLE_ARN,  # The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to AWS API operations on your behalf.
+        resourcesVpcConfig=EKS_CLUSTER_RESOURCE_VPC
     )
-
-    # Response Syntax
-
-    # {
-    #     'cluster': {
-    #         'name': 'string',
-    #         'arn': 'string',
-    #         'createdAt': datetime(2015, 1, 1),
-    #         'version': 'string',
-    #         'endpoint': 'string',
-    #         'roleArn': 'string',
-    #         'resourcesVpcConfig': {
-    #             'subnetIds': [
-    #                 'string',
-    #             ],
-    #             'securityGroupIds': [
-    #                 'string',
-    #             ],
-    #             'clusterSecurityGroupId': 'string',
-    #             'vpcId': 'string',
-    #             'endpointPublicAccess': True|False,
-    #             'endpointPrivateAccess': True|False,
-    #             'publicAccessCidrs': [
-    #                 'string',
-    #             ]
-    #         },
-    #         'kubernetesNetworkConfig': {
-    #             'serviceIpv4Cidr': 'string'
-    #         },
-    #         'logging': {
-    #             'clusterLogging': [
-    #                 {
-    #                     'types': [
-    #                         'api'|'audit'|'authenticator'|'controllerManager'|'scheduler',
-    #                     ],
-    #                     'enabled': True|False
-    #                 },
-    #             ]
-    #         },
-    #         'identity': {
-    #             'oidc': {
-    #                 'issuer': 'string'
-    #             }
-    #         },
-    #         'status': 'CREATING'|'ACTIVE'|'DELETING'|'FAILED'|'UPDATING',
-    #         'certificateAuthority': {
-    #             'data': 'string'
-    #         },
-    #         'clientRequestToken': 'string',
-    #         'platformVersion': 'string',
-    #         'tags': {
-    #             'string': 'string'
-    #         },
-    #         'encryptionConfig': [
-    #             {
-    #                 'resources': [
-    #                     'string',
-    #                 ],
-    #                 'provider': {
-    #                     'keyArn': 'string'
-    #                 }
-    #             },
-    #         ]
-    #     }
-    # }
 
 
 @utils.passmein
-def list_clusters(max_clusters=10, iter_marker=''):
-    eks = boto3.client('eks')
-
-    clusters = eks.list_clusters(maxResults=max_clusters, nextToken=iter_marker)
+def list_clusters(eksclient, MAX_CLUSTERS, ITER_MAKER):
+    clusters = eksclient.list_clusters(maxResults=MAX_CLUSTERS, nextToken=ITER_MAKER)
     marker = clusters.get('nextToken')       # None if no more clusters to retrieve
     return clusters['clusters'], marker
 
@@ -183,62 +123,11 @@ def create_kubeconfig():
     --name AirFormex-EKS
   pass
 
-      
-@utils.passmein
-def update_kubeconfig():
-# Set up the client
-s = boto3.Session(region_name=region)
-eks = s.client("eks")
 
 # get cluster details
-cluster = eks.describe_cluster(name=cluster_name)
+cluster = eks.describe_cluster(name=EKS_CLUSTER_NAME)
 cluster_cert = cluster["cluster"]["certificateAuthority"]["data"]
 cluster_ep = cluster["cluster"]["endpoint"]
-
-# build the cluster config hash
-cluster_config = {
-        "apiVersion": "v1",
-        "kind": "Config",
-        "clusters": [
-            {
-                "cluster": {
-                    "server": str(cluster_ep),
-                    "certificate-authority-data": str(cluster_cert)
-                },
-                "name": "kubernetes"
-            }
-        ],
-        "contexts": [
-            {
-                "context": {
-                    "cluster": "kubernetes",
-                    "user": "aws"
-                },
-                "name": "aws"
-            }
-        ],
-        "current-context": "aws",
-        "preferences": {},
-        "users": [
-            {
-                "name": "aws",
-                "user": {
-                    "exec": {
-                        "apiVersion": "client.authentication.k8s.io/v1alpha1",
-                        "command": "heptio-authenticator-aws",
-                        "args": [
-                            "token", "-i", cluster_name
-                        ]
-                    }
-                }
-            }
-        ]
-    }
-
-# Write in YAML.
-config_text=yaml.dump(cluster_config, default_flow_style=False)
-open(config_file, "w").write(config_text)
-
         
 
 @utils.passmein
@@ -255,50 +144,60 @@ def create_openid_connect_provider():
 
 
 @utils.passmein
-def create_vpc_cni_role(role_name, role_policy_document):
-  response = client.create_role(
-     RoleName='AirFormexEKSCNIRole',
-     AssumeRolePolicyDocument='file://"airformex-cni-role-trust-policy.json"',
+def create_vpc_cni_role(iamclient, CNI_ROLE_NAME, CNI_ROLE_POLICY_DOC):
+  response = iamclient.create_role(
+     RoleName=CNI_ROLE_NAME,
+     AssumeRolePolicyDocument=CNI_ROLE_POLICY_DOC,
   )
-  
+
 
 @utils.passmein
-def attach_policy_to_cni_role(policy_arn, role_name):
+def attach_policy_to_cni_role(CNI_ROLE_NAME, CNI_ROLE_POLICY_NAME):
   response = attach_policy_to_role(
-     policy_arn='arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
-     role_name='AirFormexEKSCNIRole'
+     policy_arn=CNI_ROLE_POLICY_NAME,
+     role_name=CNI_ROLE_NAME
   )
 
 
 @utils.passmein
-def associate_svc_to_role(policy_arn, role_name):
+def associate_svc_to_role(CNI_ROLE_ARN, EKS_CLUSTER_NAME):
   aws eks update-addon \
-  --cluster-name AirFormex-EKS \
+  --cluster-name EKS_CLUSTER_NAME \
   --addon-name vpc-cni \
-  --service-account-role-arn arn:aws:iam::213397327449:role/AirFormexEKSCNIRole 
+  --service-account-role-arn CNI_ROLE_ARN
   pass
 
 
 @utils.passmein
-def create_node_role(policy_arn, role_name):
+def create_node_role(EKS_CLUSTER_NODE_ROLE, EKS_CLUSTER_NODE_ROLE_POLICY_DOC):
   response = client.create_role(
-     RoleName='AirFormexEKSNodeRole',
-     AssumeRolePolicyDocument='file://"airformex-node-role-trust-policy.json"',
+     RoleName=EKS_CLUSTER_NODE_ROLE,
+     AssumeRolePolicyDocument=EKS_CLUSTER_NODE_ROLE_POLICY_DOC,
   )
 
 
 @utils.passmein
-def attach_policy_to_node_role(policy_arn, role_name):
-  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy', role_name='AirFormexEKSNodeRole')
-  response = attach_policy_to_role(policy_arn='arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly', role_name='AirFormexEKSNodeRole')
+def attach_policy_to_node_role(
+    EKS_CLUSTER_NODE_ROLE,
+    EKS_CLUSTER_NODE_ROLE_WORKER_POLICY_ARN,
+    EKS_CLUSTER_NODE_ROLE_CONTAINER_POLICY_ARN,
+):
+  response = attach_policy_to_role(
+      policy_arn=EKS_CLUSTER_NODE_ROLE_WORKER_POLICY_ARN,
+      role_name=EKS_CLUSTER_NODE_ROLE
+  )
+  response = attach_policy_to_role(
+      policy_arn=EKS_CLUSTER_NODE_ROLE_CONTAINER_POLICY_ARN,
+      role_name=EKS_CLUSTER_NODE_ROLE
+  )
 
 
 def create_eks_node_group():
     pass
 
 
-def create_ec2_keypair():
-    aws ec2 create-key-pair --region ap-southeast-2 --key-name AirFormexKeyPair
+def create_ec2_keypair(REGION_NAME, KEY_NAME):
+    aws ec2 create-key-pair --region REGION_NAME --key-name KEY_NAME
     pass
 
 
@@ -307,58 +206,46 @@ def node_post_check():
 
 
 def main():
-
-    # Init EKS client
-    client = boto3.client('eks', config=my_config)
-
     # create cluster
-    resourcesVpcConfig = create_aws_vpc_stack()
-    create_iam_role()
-    attach_eks_iam()
+    resourcesVpcConfig = create_aws_vpc_stack(cfnclient, CFN_STACK_NAME, CFN_TEMP_URL)
+    
+    create_cluster_role_trust_policy(iamclient, ROLE_TRUST_POLICY_NAME, ROLE_TRUST_POLICY_FILE)
+    
+    create_iam_role(iamclient, ROLE_NAME, ROLE_POLICY_DOC)
+    
+    attach_eks_iam(iamclient, ROLE_NAME, ROLE_POLICY_NAME)
+    
+    response = create_eks_cluster(eksclient, EKS_CLUSTER_NAME, EKS_CLUSTER_VERSION, EKS_CLUSTER_ROLE_ARN, EKS_CLUSTER_RESOURCE_VPC)
+    
+    clusters, marker = list_clusters(eksclient, MAX_CLUSTERS, ITER_MAKER)
+    
     create_kubeconfig()
+    
     test_kube()
-
-    create_vpc_cni_role(role_name, role_policy_document)
-    attach_policy_to_cni_role(policy_arn, role_name)
-    associate_svc_to_role(policy_arn, role_name)
-    create_node_role(policy_arn, role_name)
-    attach_policy_to_node_role(policy_arn, role_name)
-    add_node_group()
-
-    response = create_eks_cluster(
-      cluster_name='AirFormex-EKS',
-      roleArn=roleArn,
-      resourcesVpcConfig=resourcesVpcConfig,
-      kubernetesNetworkConfig=kubernetesNetworkConfig,
-      logging=logging,
-      clientRequestToken=clientRequestToken,
-      tags=tags,
-      encryptionConfig=encryptionConfig)
-    # list cluster
-    clusters, marker = list_clusters()
-    if not clusters:
-        print('No clusters exist.')
-    else:
-        while True:
-            # Print cluster names
-            for cluster in clusters:
-                print(cluster)
-
-            # If no more clusters exist, exit loop, otherwise retrieve the next batch
-            if marker is None:
-                break
-            clusters, marker = list_clusters(iter_marker=marker)
-
+    
     kubeconfig_update():
+    
     create_openid_connect_provider():
-    create_vpc_cni_plugin_iam_role():
-    attach_vpc_cni_trust_policy_to_eks_iam_role():
-    associate_eks_account_to_eks_iam_role():
-    create_node_iam_role():
-    attach_eks_management_policy_to_eks_iam_role():
-    create_eks_node_group():
-    create_ec2_keypair():
-    node_post_check():
+    
+    create_vpc_cni_role(iamclient, CNI_ROLE_NAME, CNI_ROLE_POLICY_DOC)
+    
+    attach_policy_to_cni_role(CNI_ROLE_NAME, CNI_ROLE_POLICY_NAME)
+    
+    associate_svc_to_role(CNI_ROLE_ARN, EKS_CLUSTER_NAME)
+    
+    create_node_role(EKS_CLUSTER_NODE_ROLE, EKS_CLUSTER_NODE_ROLE_POLICY_DOC)
+    
+    attach_policy_to_node_role(
+    EKS_CLUSTER_NODE_ROLE,
+    EKS_CLUSTER_NODE_ROLE_WORKER_POLICY_ARN,
+    EKS_CLUSTER_NODE_ROLE_CONTAINER_POLICY_ARN,
+)
+    
+    create_eks_node_group()
+    
+    create_ec2_keypair(REGION_NAME, KEY_NAME)
+    
+    node_post_check()
 
 if __name__ == '__main__':
     main()
@@ -436,3 +323,115 @@ if __name__ == '__main__':
 # update_cluster_version()
 # update_nodegroup_config()
 # update_nodegroup_version()
+
+
+Appendix 
+    # Response Syntax
+
+    # {
+    #     'cluster': {
+    #         'name': 'string',
+    #         'arn': 'string',
+    #         'createdAt': datetime(2015, 1, 1),
+    #         'version': 'string',
+    #         'endpoint': 'string',
+    #         'roleArn': 'string',
+    #         'resourcesVpcConfig': {
+    #             'subnetIds': [
+    #                 'string',
+    #             ],
+    #             'securityGroupIds': [
+    #                 'string',
+    #             ],
+    #             'clusterSecurityGroupId': 'string',
+    #             'vpcId': 'string',
+    #             'endpointPublicAccess': True|False,
+    #             'endpointPrivateAccess': True|False,
+    #             'publicAccessCidrs': [
+    #                 'string',
+    #             ]
+    #         },
+    #         'kubernetesNetworkConfig': {
+    #             'serviceIpv4Cidr': 'string'
+    #         },
+    #         'logging': {
+    #             'clusterLogging': [
+    #                 {
+    #                     'types': [
+    #                         'api'|'audit'|'authenticator'|'controllerManager'|'scheduler',
+    #                     ],
+    #                     'enabled': True|False
+    #                 },
+    #             ]
+    #         },
+    #         'identity': {
+    #             'oidc': {
+    #                 'issuer': 'string'
+    #             }
+    #         },
+    #         'status': 'CREATING'|'ACTIVE'|'DELETING'|'FAILED'|'UPDATING',
+    #         'certificateAuthority': {
+    #             'data': 'string'
+    #         },
+    #         'clientRequestToken': 'string',
+    #         'platformVersion': 'string',
+    #         'tags': {
+    #             'string': 'string'
+    #         },
+    #         'encryptionConfig': [
+    #             {
+    #                 'resources': [
+    #                     'string',
+    #                 ],
+    #                 'provider': {
+    #                     'keyArn': 'string'
+    #                 }
+    #             },
+    #         ]
+    #     }
+    # }
+
+    
+# build the cluster config hash
+# cluster_config = {
+#         "apiVersion": "v1",
+#         "kind": "Config",
+#         "clusters": [
+#             {
+#                 "cluster": {
+#                     "server": str(cluster_ep),
+#                     "certificate-authority-data": str(cluster_cert)
+#                 },
+#                 "name": "kubernetes"
+#             }
+#         ],
+#         "contexts": [
+#             {
+#                 "context": {
+#                     "cluster": "kubernetes",
+#                     "user": "aws"
+#                 },
+#                 "name": "aws"
+#             }
+#         ],
+#         "current-context": "aws",
+#         "preferences": {},
+#         "users": [
+#             {
+#                 "name": "aws",
+#                 "user": {
+#                     "exec": {
+#                         "apiVersion": "client.authentication.k8s.io/v1alpha1",
+#                         "command": "heptio-authenticator-aws",
+#                         "args": [
+#                             "token", "-i", cluster_name
+#                         ]
+#                     }
+#                 }
+#             }
+#         ]
+#     }
+
+# # Write in YAML.
+# config_text=yaml.dump(cluster_config, default_flow_style=False)
+# open(config_file, "w").write(config_text)
